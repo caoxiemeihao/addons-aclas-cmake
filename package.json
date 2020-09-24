@@ -1,0 +1,15 @@
+{
+  "name": "addons-aclas-cmake",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "草鞋没号 <308487730@qq.com>",
+  "license": "MIT",
+  "scripts": {
+    "preinstall": "npm config set cmake_js_arch x64",    
+    "install": "cmake-js compile"
+  },
+  "dependencies": {
+    "cmake-js": "^6.1.0",
+    "node-addon-api": "^3.0.2"
+  }
+}
