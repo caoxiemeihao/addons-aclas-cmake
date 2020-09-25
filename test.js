@@ -1,4 +1,4 @@
 const aclas = require('./build/Release/aclas.node');
 
 
-console.log(aclas);
+console.log(aclas.hello());

@@ -13,7 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${CMAKE_JS_INC})
 
 # Declare the location of the source files
-file(GLOB SOURCE_FILES "src/*.cc" "src/*.h")
+# file(GLOB SOURCE_FILES "src/*.c" "src/*.cpp" "src/*.cc" "src/*.h")
+file(GLOB SOURCE_FILES "src/aclas_cc.cc")
 
 # This line will tell CMake that we're building a shared library
 # from the above source files
