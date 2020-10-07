@@ -2,82 +2,92 @@
 #include <iostream>
 #include <windows.h>
 
-typedef struct {
+typedef struct
+{
 	Napi::Env env;
 	Napi::Function fn;
 	Napi::Object json;
 } NapiCall;
 
 char json_extra[240];
+bool is_ran = false; // 判断是否有给调用处反馈
 
-void Stdout2Nodejs(INT32 code, INT32 index, INT32 total, char* extra = json_extra) {
+void Stdout2Nodejs(INT32 code, INT32 index, INT32 total, char *extra = json_extra)
+{
 	std::cout << "##dispatch={"
-		<< "\"code\":" << code
-		<< ","
-		<< "\"index\":" << index
-		<< ","
-		<< "\"total\":" << total
-		<< ","
-		<< "\"extra\":" << "\"" << extra << "\""
-		<< "}##" << std::endl;
+						<< "\"code\":" << code
+						<< ","
+						<< "\"index\":" << index
+						<< ","
+						<< "\"total\":" << total
+						<< ","
+						<< "\"extra\":"
+						<< "\"" << extra << "\""
+						<< "}##" << std::endl;
+	is_ran = true;
 }
 
 // -----------------------------------------------
-typedef struct AclasDevice {
-	UINT32  ProtocolType;
-	UINT32  Addr;
-	UINT32  Port; // 5002
-	UCHAR   name[16];
-	UINT32  ID;
-	UINT32  Version;
-	BYTE    Country;
-	BYTE    DepartmentID;
-	BYTE    KeyType;
-	UINT64  PrinterDot;
-	LONG64  PrnStartDate;
-	UINT32  LabelPage;
-	UINT32  PrinterNo;
-	USHORT  PLUStorage;
-	USHORT  HotKeyCount;
-	USHORT  NutritionStorage;
-	USHORT  DiscountStorage;
-	USHORT  Note1Storage;
-	USHORT  Note2Storage;
-	USHORT  Note3Storage;
-	USHORT  Note4Storage;
-	BYTE    stroge[177];
+typedef struct AclasDevice
+{
+	UINT32 ProtocolType;
+	UINT32 Addr;
+	UINT32 Port; // 5002
+	UCHAR name[16];
+	UINT32 ID;
+	UINT32 Version;
+	BYTE Country;
+	BYTE DepartmentID;
+	BYTE KeyType;
+	UINT64 PrinterDot;
+	LONG64 PrnStartDate;
+	UINT32 LabelPage;
+	UINT32 PrinterNo;
+	USHORT PLUStorage;
+	USHORT HotKeyCount;
+	USHORT NutritionStorage;
+	USHORT DiscountStorage;
+	USHORT Note1Storage;
+	USHORT Note2Storage;
+	USHORT Note3Storage;
+	USHORT Note4Storage;
+	BYTE stroge[177];
 } DeviceInfo;
 
-extern "C" {
-	typedef bool (CALLBACK* pAclasSDKInitialize)(char* s);
-	typedef bool (CALLBACK* pGetDevicesInfo)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, DeviceInfo* info);
-	typedef void (WINAPI* FP)(UINT32 Errorcode, UINT32 index, UINT32 Total, NapiCall* call); // ���һλ�βλᴫ�� onprogress
-	typedef HANDLE (CALLBACK* pAclasSDKExecTask)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char* FileName, FP fp, NapiCall* call); // ���һλ�βλᴫ�� onprogress
-	typedef HANDLE (CALLBACK* pAclasSDKWaitForTask)(HANDLE handle);
-	typedef int(CALLBACK* pAclasSDKSyncExecTask)(char* Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char* FileName);
+extern "C"
+{
+	typedef bool(CALLBACK *pAclasSDKInitialize)(char *s);
+	typedef bool(CALLBACK *pGetDevicesInfo)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, DeviceInfo *info);
+	typedef void(WINAPI *FP)(UINT32 Errorcode, UINT32 index, UINT32 Total, NapiCall *call);																																								// ���һλ�βλᴫ�� onprogress
+	typedef HANDLE(CALLBACK *pAclasSDKExecTask)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char *FileName, FP fp, NapiCall *call); // ���һλ�βλᴫ�� onprogress
+	typedef HANDLE(CALLBACK *pAclasSDKWaitForTask)(HANDLE handle);
+	typedef int(CALLBACK *pAclasSDKSyncExecTask)(char *Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char *FileName);
 }
 
-void WINAPI onprogress(UINT32 Errorcode, UINT32 Index, UINT32 Total, NapiCall* call) {
+void WINAPI onprogress(UINT32 Errorcode, UINT32 Index, UINT32 Total, NapiCall *call)
+{
 	// Fatal error in HandleScope::HandleScope
 	// Entering the V8 API without proper locking in place
 	// call->fn.Call(call->env.Global(), { call->json });
 
 	Stdout2Nodejs(Errorcode, Index, Total);
-	
-	switch (Errorcode) {
-		case 0x0000:
-			// std::cout << "complete" << std::endl;
-			break;
-		case 0x0001:
-			// std::cout << Index << "/" << Total << std::endl;
-			break;
+
+	switch (Errorcode)
+	{
+	case 0x0000:
+		// std::cout << "complete" << std::endl;
+		break;
+	case 0x0001:
+		// std::cout << Index << "/" << Total << std::endl;
+		break;
 	}
 }
 
-UINT MakeHost2Dword(char* host) {
+UINT MakeHost2Dword(char *host)
+{
 	UINT result;
 	UINT a[4];
-	char* p1 = NULL;
+	char *p1 = NULL;
 	char str[20];
 	strcpy(str, host);
 	p1 = strtok(str, ".");
@@ -92,32 +102,36 @@ UINT MakeHost2Dword(char* host) {
 	return result;
 }
 
-void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall* call) {
-	HMODULE hModule = LoadLibrary(DllPath/* "AclasSDK.dll" */);
+void Start(char *DllPath, char *Host, UINT32 ProceType, char *FileName, NapiCall *call)
+{
+	HMODULE hModule = LoadLibrary(DllPath /* "AclasSDK.dll" */);
 
 	// std::cout << hModule << std::endl; 0000000000400000 or 0000000000000000
 
-	if (!hModule) {
+	if (!hModule)
+	{
 		Stdout2Nodejs(404, 0, 0);
 		return;
 	}
 
 	// Initialize
 	pAclasSDKInitialize Initialize = (pAclasSDKInitialize)GetProcAddress(hModule, "AclasSDK_Initialize");
-	char* str = NULL;
+	char *str = NULL;
 	BOOL sta = Initialize(str);
 
-	if (sta) {
+	if (sta)
+	{
 		std::cout << "Initialize success" << std::endl;
 	}
-	else {
+	else
+	{
 		std::cout << "Initialize failed" << std::endl;
 		return;
 	}
 
 	// Get Device Information
 	pGetDevicesInfo getDevicesInfo = (pGetDevicesInfo)GetProcAddress(hModule, "AclasSDK_GetDevicesInfo");
-	DeviceInfo* info = (DeviceInfo*)malloc(sizeof(DeviceInfo));
+	DeviceInfo *info = (DeviceInfo *)malloc(sizeof(DeviceInfo));
 	UINT addr = MakeHost2Dword(Host); // "192.168.1.2"
 	BOOL ref = getDevicesInfo(addr, 0, 0, info);
 
@@ -126,13 +140,19 @@ void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall
 	pAclasSDKExecTask execTask = (pAclasSDKExecTask)GetProcAddress(hModule, "AclasSDK_ExecTaskA");
 	pAclasSDKWaitForTask waitForTask = (pAclasSDKWaitForTask)GetProcAddress(hModule, "AclasSDK_WaitForTask");
 	HANDLE handle = waitForTask(execTask(addr, info->Port, info->ProtocolType, 0, ProceType, FileName, onprogress, call));
-	
+
+	if (!is_ran) {
+		Stdout2Nodejs(403, 0, 0); // Connect timeout.
+	}
+	is_ran = false;
+
 	// Release resources
 	GetProcAddress(hModule, "AclasSDK_Finalize");
 }
 // -----------------------------------------------
 
-void RunCallback(const Napi::CallbackInfo& info) {
+void RunCallback(const Napi::CallbackInfo &info)
+{
 	std::cout << "==== run sdk ====" << std::endl;
 
 	Napi::Env env = info.Env();
@@ -149,7 +169,7 @@ void RunCallback(const Napi::CallbackInfo& info) {
 	UINT32 ProceType;
 	char FileName[200];
 
-	NapiCall* call = (NapiCall*)malloc(sizeof(NapiCall));
+	NapiCall *call = (NapiCall *)malloc(sizeof(NapiCall));
 	call->env = env;
 	call->fn = cb;
 	call->json = json;
@@ -162,16 +182,16 @@ void RunCallback(const Napi::CallbackInfo& info) {
 	napi_get_value_string_utf8(call->env, extra, json_extra, sizeof(json_extra), NULL);
 
 	Start(
-		DllPath,
-		Host,
-		ProceType, // 0x0000,
-		FileName,
-		call
-	);
+			DllPath,
+			Host,
+			ProceType, // 0x0000,
+			FileName,
+			call);
 	// cb.Call(env.Global(), { json });
 }
 
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
+Napi::Object Init(Napi::Env env, Napi::Object exports)
+{
 	return Napi::Function::New(env, RunCallback);
 }
 
