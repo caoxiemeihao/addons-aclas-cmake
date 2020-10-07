@@ -103,10 +103,10 @@ void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall
 	BOOL sta = Initialize(str);
 
 	if (sta) {
-		std::cout << "初始化成功" << std::endl;
+		std::cout << "Initialize success" << std::endl;
 	}
 	else {
-		std::cout << "初始化失败" << std::endl;
+		std::cout << "Initialize failed" << std::endl;
 		return;
 	}
 
@@ -122,7 +122,7 @@ void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall
 	pAclasSDKWaitForTask waitForTask = (pAclasSDKWaitForTask)GetProcAddress(hModule, "AclasSDK_WaitForTask");
 	HANDLE handle = waitForTask(execTask(addr, info->Port, info->ProtocolType, 0, ProceType, FileName, onprogress, call));
 	
-	// 释放资源
+	// Release resources
 	GetProcAddress(hModule, "AclasSDK_Finalize");
 }
 // -----------------------------------------------
