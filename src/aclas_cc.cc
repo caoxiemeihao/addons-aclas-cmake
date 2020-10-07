@@ -11,7 +11,7 @@ typedef struct {
 char json_extra[240];
 
 void Stdout2Nodejs(INT32 code, INT32 index, INT32 total, char* extra = json_extra) {
-	std::cout << "##{"
+	std::cout << "##dispatch={"
 		<< "\"code\":" << code
 		<< ","
 		<< "\"index\":" << index
@@ -51,8 +51,8 @@ typedef struct AclasDevice {
 extern "C" {
 	typedef bool (CALLBACK* pAclasSDKInitialize)(char* s);
 	typedef bool (CALLBACK* pGetDevicesInfo)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, DeviceInfo* info);
-	typedef void (WINAPI* FP)(UINT32 Errorcode, UINT32 index, UINT32 Total, NapiCall* call); // ×îºóÒ»Î»ÐÎ²Î»á´«¸ø onprogress
-	typedef HANDLE (CALLBACK* pAclasSDKExecTask)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char* FileName, FP fp, NapiCall* call); // ×îºóÒ»Î»ÐÎ²Î»á´«¸ø onprogress
+	typedef void (WINAPI* FP)(UINT32 Errorcode, UINT32 index, UINT32 Total, NapiCall* call); // ï¿½ï¿½ï¿½Ò»Î»ï¿½Î²Î»á´«ï¿½ï¿½ onprogress
+	typedef HANDLE (CALLBACK* pAclasSDKExecTask)(UINT32 Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char* FileName, FP fp, NapiCall* call); // ï¿½ï¿½ï¿½Ò»Î»ï¿½Î²Î»á´«ï¿½ï¿½ onprogress
 	typedef HANDLE (CALLBACK* pAclasSDKWaitForTask)(HANDLE handle);
 	typedef int(CALLBACK* pAclasSDKSyncExecTask)(char* Addr, UINT32 Port, UINT32 ProtocolType, UINT32 ProceType, UINT32 DataType, char* FileName);
 }
@@ -95,7 +95,12 @@ UINT MakeHost2Dword(char* host) {
 void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall* call) {
 	HMODULE hModule = LoadLibrary(DllPath/* "AclasSDK.dll" */);
 
-	if (!hModule) return;
+	// std::cout << hModule << std::endl; 0000000000400000 or 0000000000000000
+
+	if (!hModule) {
+		Stdout2Nodejs(404, 0, 0);
+		return;
+	}
 
 	// Initialize
 	pAclasSDKInitialize Initialize = (pAclasSDKInitialize)GetProcAddress(hModule, "AclasSDK_Initialize");
@@ -128,6 +133,8 @@ void Start(char* DllPath, char* Host, UINT32 ProceType, char* FileName, NapiCall
 // -----------------------------------------------
 
 void RunCallback(const Napi::CallbackInfo& info) {
+	std::cout << "==== run sdk ====" << std::endl;
+
 	Napi::Env env = info.Env();
 	Napi::Function cb = info[1].As<Napi::Function>();
 	Napi::Object json = info[0].As<Napi::Object>();
